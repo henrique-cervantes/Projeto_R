@@ -80,7 +80,8 @@ guns_per_year[order(-guns_per_year$mean_HFR_per_year),]
 
 
 # Gráfico HFR por ANO
-
+ggplot(guns_per_year, aes(x = YEAR, y = HFR)) +
+  geom_line()
 
 
 # HFR por ESTADO 
@@ -93,8 +94,8 @@ guns_per_state
 guns_per_state[order(-guns_per_state$mean_HFR_per_state),]
 
 
-# Gráfico de HFR por ANO por ESTADo
-ggplot(guns_dataset, aes(x = YEAR, HFR)) +
+# Gráfico de HFR por ANO por ESTADO
+ggplot(guns_dataset, aes(x = YEAR, y = HFR)) +
   geom_line() +
   facet_wrap(~ STATE)
 
@@ -130,93 +131,6 @@ ggplot(df_reg_2, aes(x = Mean_HFR_per_state, y = Crime_per_state)) +
 lm(Crime_per_state ~ Mean_HFR_per_state, df_reg_2)
 
 
-########################################################################
-
-total_crime_per_year <- hate_crime_dataset %>%
-  count(DATA_YEAR)
-total_crime_per_year[order(-total_crime_per_year$n),]
-
-ggplot(total_crime_per_year, aes(x = DATA_YEAR, y = n)) +
-  geom_line()
-
-
-
-
-total_crime_per_year_desx <- total_crime_per_year[order(-total_crime_per_year$n),]
-total_crime_per_year_desx
-
-most_violent_year <- total_crime_per_year %>%
-  top_n(1, n)
-
-
-
-total_crime_per_year[max(total_crime_per_state$n)]
-
-
-
-crime_per_state
-
-crime_per_state <- hate_crime_dataset %>%
-  filter
-
-
-barplot(crime_per_state$n, names.arg = crime_per_state$STATE_NAME)
-
-help(filter)
-# crimes por ano
-crime_per_year <- hate_crime_dataset %>%
-  count(DATA_YEAR)
-crime_per_year
-
-ggplot(crime_per_year, aes(x = DATA_YEAR, y = n)) +
-  geom_line()
-
-
-ggplot(hate_crime_dataset, aes(x = DATA_YEAR, Y ))
-
-
-
-
-crime <- unique(hate_crime_dataset$BIAS_DESC)
-crime
-
-estados <- unique(hate_crime_dataset$STATE_NAME)
-estados
-
-
-#hate_crime_dataset %>% 
-#  group_by(STATE_NAME) %>% 
-#  summarise(BIAS_DESC = paste(unique(BIAS_DESC), collapse = ', '))
-
-
-data_pol_prefs_raw <- read_xlsx('Partisan_Balance_For_Use2011_06_09b.xlsx')
-
-
-
-
-#### REGRESSÕES ####
-
-
-
-
-a <- guns_dataset %>%
-  select(c(Year, HFR))
-a
-
-
-help(summary)
-b <- guns_dataset %>%
-  group_by(Year) %>%
-  mutate(H)
-
-ggplot(guns_dataset, aes(x = Year, HFR)) +
-  geom_line() +
-  facet_wrap(~ STATE)
-
-
-
-
-
 
 ### DESCRIÇÃO DOS DADOS DE GUNS ###
 
@@ -227,9 +141,6 @@ ggplot(guns_dataset, aes(x = Year, HFR)) +
 # GSS 1980, 1982, 1984, 1985, 1987, 1988, 1989, 1990, 1991, 1993, 1994, 1996, 1998, 2000, 2002, 2004, 2006, 2008, 2010, 2012, 2014, 2016
 # PEW 1997, 2000, 2003, 2004, 2007, 2009, 2010, 2011, 2012, 2013, 2015, 2016
 
-10000 * 0.04
-(20 / 7600) * 1824
-72 * 4.8
 
 # Universl !Universal background checks state indicator
 # Permit !Permit to purchase state indicator
@@ -244,15 +155,7 @@ ggplot(guns_dataset, aes(x = Year, HFR)) +
 # BS2 !Second blended linear spline-represents roughly 1993-2004
 # BS3 !Third blended linear spline-represents roughly 1993-2004
 
+###########################################################################
 
-colnames(guns_dataset)
-# 
-
-
-
-############################### RASCUNHO ##############################
-# Ruim - o q as variaveis significam?
-#pol_pref_dataset_raw <- read_excel('stateideology_v2018.xlsx')
-
-# Ruim
-#pol_pref_dataset_raw_2 <- read.csv('states_parties_estimates.csv')
+## DATASET PREFERÊNCIAS POLÍTICAS
+data_pol_prefs_raw <- read_xlsx('Partisan_Balance_For_Use2011_06_09b.xlsx')
