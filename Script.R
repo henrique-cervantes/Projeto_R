@@ -80,7 +80,7 @@ guns_per_year[order(-guns_per_year$mean_HFR_per_year),]
 
 
 # Gráfico HFR por ANO
-ggplot(guns_per_year, aes(x = YEAR, y = HFR)) +
+ggplot(guns_per_year, aes(x = YEAR, y = mean_HFR_per_year)) +
   geom_line()
 
 
@@ -157,5 +157,16 @@ lm(Crime_per_state ~ Mean_HFR_per_state, df_reg_2)
 
 ###########################################################################
 
-## DATASET PREFERÊNCIAS POLÍTICAS
-data_pol_prefs_raw <- read_xlsx('Partisan_Balance_For_Use2011_06_09b.xlsx')
+## DATASET PREFERÊNCIAS POLÍTICAS ##
+data_pol_pref_raw <- read_xlsx('Partisan_Balance_For_Use2011_06_09b.xlsx')
+names(data_pol_pref_raw)[names(data_pol_pref_raw) == "year"] <- "YEAR"
+names(data_pol_pref_raw)[names(data_pol_pref_raw) == "state"] <- "STATE"
+data_pol_pref <- data_pol_pref_raw %>%
+  filter(YEAR >= 1980)
+
+########## DATASET POPULAÇÃO ############
+data_pop_raw <- read.csv("county_population.csv")
+
+
+data_prop_2000s <- read_xlsx("nst-est2019-01.xlsx")
+data_prop_2010s <- read_xls("st-est00int-01.xls")
