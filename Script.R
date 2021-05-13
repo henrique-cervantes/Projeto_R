@@ -168,5 +168,31 @@ data_pol_pref <- data_pol_pref_raw %>%
 data_pop_raw <- read.csv("county_population.csv")
 
 
-data_prop_2000s <- read_xlsx("nst-est2019-01.xlsx")
-data_prop_2010s <- read_xls("st-est00int-01.xls")
+data_prop_2000s <- read_csv("2000s_pop.csv")
+data_prop_2010s <- read.csv("2010s_pop.csv")
+
+
+
+##### TRATAMENTO DADOS DA POP DE 2000s #####
+#data_prop_2000s <- read_xls("2000_2010.xls")
+#colnames(data_prop_2000s) <- c("STATE", "Census","2000", "2001",
+#                               "2002", "2003", "2004", "2005",
+#                               "2006", "2007", "2008", "2009", "2010")
+#data_prop_2000s <- data_prop_2000s %>%
+#  select(-c("Census", "2010"))
+
+#data_prop_2000s <- data_prop_2000s[-c(1, 2, 14, 54:63),]
+#data_prop_2000s$STATE <- c(total_crime_per_state$STATE)
+
+#write.csv(data_prop_2000s, "2000s_pop.csv")
+
+##### TRATAMENTO DADOS DA POP DE 2010s ######
+#data_prop_2010s <- read_xlsx("2010_2020.xlsx")
+#colnames(data_prop_2010s) <- c("STATE", "Census", "Estimates Base", "2010", "2011",
+#                               "2012", "2013", "2014", "2015",
+#                               "2016", "2017", "2018", "2019")
+#data_prop_2010s <- data_prop_2010s %>%
+#  select(-c("Census", "Estimates Base"))
+
+#data_prop_2010s <- data_prop_2010s[-c(1:8, 20, 60:66),]
+#data_prop_2010s$STATE <- c(total_crime_per_state$STATE)
