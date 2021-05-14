@@ -3,6 +3,7 @@ library(readxl)
 library(ggplot2)
 library(tidyverse)
 library(infer)
+library(data.table)
 
 #### HATE CRIME ####
 
@@ -63,7 +64,8 @@ total_crime_per_type
 # IMPORTAÇÃO 
 guns_dataset_raw <- read_excel('TL-354-State-Level Estimates of Household Firearm Ownership.xlsx', sheet = 2)
 guns_dataset <- guns_dataset_raw %>%
-  filter(Year >= 1991)
+  filter(Year >= 1991) %>%
+  select(-c("FIP"))
 names(guns_dataset)[names(guns_dataset) == "Year"] <- "YEAR"
 
 
@@ -157,6 +159,8 @@ lm(Crime_per_state ~ Mean_HFR_per_state, df_reg_2)
 
 ###########################################################################
 
+
+
 ## DATASET PREFERÊNCIAS POLÍTICAS ##
 data_pol_pref_raw <- read_xlsx('Partisan_Balance_For_Use2011_06_09b.xlsx')
 names(data_pol_pref_raw)[names(data_pol_pref_raw) == "year"] <- "YEAR"
@@ -164,16 +168,64 @@ names(data_pol_pref_raw)[names(data_pol_pref_raw) == "state"] <- "STATE"
 data_pol_pref <- data_pol_pref_raw %>%
   filter(YEAR >= 1980)
 
+
+
 ########## DATASET POPULAÇÃO ############
-data_pop_raw <- read.csv("county_population.csv")
+data_pop <- read_csv("total_pop.csv") 
+data_pop <- data_pop %>%
+  select(-c("X1")) 
 
 
-data_prop_2000s <- read_csv("2000s_pop.csv")
-data_prop_2010s <- read.csv("2010s_pop.csv")
+setDT(data_pop)
+data_pop_arranged <- melt(data_pop)
+names(data_pop_arranged) <- c("STATE", "YEAR", "POPULATION")
+data_pop_arranged <- as.data.frame(data_pop_arranged)
+data_pop_arranged <- data_pop_arranged[-c(1:50, 1351:1500),]
+
+
+prop_crime_per_state_per_year <- merge(crime_per_state_per_year, data_pop_arranged) %>%
+  mutate(PROP_CRIME = n / POPULATION)
+
+
+
+
+
+
 
 
 
 ##### TRATAMENTO DADOS DA POP DE 2000s #####
+#data_pop_raw <- read.csv("county_population.csv")
+
+#data_pop_1990s <- read_csv("1990s_pop.csv")
+#data_pop_2000s <- read_csv("2000s_pop.csv")
+#data_pop_2010s <- read.csv("2010s_pop.csv")
+
+#data_pop_1990_2000 <- merge(data_pop_1990s, data_pop_2000s)
+
+#data_pop_all <- merge(data_pop_1990_2000, data_pop_2010s)
+
+#data_pop_all <- data_pop_all[,-c(22)]
+
+#colnames(data_pop_all) <- c("STATE", 1990, 1991, 1992, 1993, 1994,
+#                            1995, 1996, 1997, 1998, 1999, 2000, 
+#                            2001, 2002, 2003, 2004, 2005, 2006, 
+#                            2007, 2008, 2009, 2010, 2011, 2012,
+#                            2013, 2014, 2015, 2016, 2017, 2018, 2019)
+#write.csv(data_pop_all, "total_pop.csv")
+
+
+
+#range(1:10)
+
+
+#help(range)
+
+#data_guns_crime <- merge(guns_dataset, hate_crime_dataset)
+
+#data_guns_crime_2 <- merge(hate_crime_dataset, guns_dataset)
+
+
 #data_prop_2000s <- read_xls("2000_2010.xls")
 #colnames(data_prop_2000s) <- c("STATE", "Census","2000", "2001",
 #                               "2002", "2003", "2004", "2005",
@@ -184,13 +236,13 @@ data_prop_2010s <- read.csv("2010s_pop.csv")
 #data_prop_2000s <- data_prop_2000s[-c(1, 2, 14, 54:63),]
 #data_prop_2000s$STATE <- c(total_crime_per_state$STATE)
 
-#write.csv(data_prop_2000s, "2000s_pop.csv")
+#write.csv(data_prop_2010s, "2010s_pop.csv")
 
 ##### TRATAMENTO DADOS DA POP DE 2010s ######
 #data_prop_2010s <- read_xlsx("2010_2020.xlsx")
 #colnames(data_prop_2010s) <- c("STATE", "Census", "Estimates Base", "2010", "2011",
-#                               "2012", "2013", "2014", "2015",
-#                               "2016", "2017", "2018", "2019")
+                         #      "2012", "2013", "2014", "2015",
+                       #        "2016", "2017", "2018", "2019")
 #data_prop_2010s <- data_prop_2010s %>%
 #  select(-c("Census", "Estimates Base"))
 
