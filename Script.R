@@ -8,8 +8,7 @@ library(data.table)
 #### HATE CRIME ####
 
 # IMPORTAÇÃO DATASET HATE_CRIME
-hate_crime_dataset_raw <- read.csv('hate_crime.csv')
-hate_crime_dataset <- hate_crime_dataset_raw %>%
+hate_crime_dataset <- read.csv('hate_crime.csv') %>%
   select(-c('INCIDENT_ID', 'ORI', 'PUB_AGENCY_NAME',
             'PUB_AGENCY_UNIT', 'STATE_ABBR',
             'DIVISION_NAME', 'POPULATION_GROUP_CODE',
@@ -62,8 +61,7 @@ total_crime_per_type
 #### DATASET GUNS ####
 
 # IMPORTAÇÃO 
-guns_dataset_raw <- read_excel('TL-354-State-Level Estimates of Household Firearm Ownership.xlsx', sheet = 2)
-guns_dataset <- guns_dataset_raw %>%
+guns_dataset <- read_excel('TL-354-State-Level Estimates of Household Firearm Ownership.xlsx', sheet = 2) %>%
   filter(Year >= 1991) %>%
   select(-c("FIP"))
 names(guns_dataset)[names(guns_dataset) == "Year"] <- "YEAR"
@@ -77,8 +75,7 @@ guns_per_year <- guns_dataset %>%
   group_by(YEAR) %>%
   mutate(mean_HFR_per_year = mean(HFR))
 guns_per_year <- guns_per_year[1:26, c(1, 3)]
-guns_per_year
-guns_per_year[order(-guns_per_year$mean_HFR_per_year),]
+guns_per_year; guns_per_year[order(-guns_per_year$mean_HFR_per_year),]
 
 
 # Gráfico HFR por ANO
@@ -92,9 +89,13 @@ guns_per_state <- guns_dataset %>%
   group_by(STATE) %>%
   mutate(mean_HFR_per_state = mean(HFR))
 guns_per_state <- guns_per_state[c(1:1300 %% 26 == 0), c(2, 4)]
-guns_per_state
-guns_per_state[order(-guns_per_state$mean_HFR_per_state),]
+guns_per_state; guns_per_state[order(-guns_per_state$mean_HFR_per_state),]
 
+
+# HFR POR ANO POR ESTADO
+guns_per_state_per_year <- guns_dataset %>%
+  select(c("YEAR", "STATE", "HFR"))
+names(guns_per_state_per_year) <- c("YEAR", "STATE", "Prop_guns_p_y_s")
 
 # Gráfico de HFR por ANO por ESTADO
 ggplot(guns_dataset, aes(x = YEAR, y = HFR)) +
@@ -104,12 +105,9 @@ ggplot(guns_dataset, aes(x = YEAR, y = HFR)) +
 
 #### REGRESSÕES ####
 
-
 # REGRESSÃO ANOS MAIS CRIMES ~ ANOS COM MAIS ARMAS 
-df_reg_1 <- data.frame(Year = c(1991:2016),
-                       Crime_per_year = total_crime_per_year$n,
-                       Mean_HFR_per_year = guns_per_year$mean_HFR_per_year)
-
+df_reg_1 <- merge(total_crime_per_year, guns_per_year)
+names(df_reg_1) <- c("YEAR", "Crime_per_year", "Mean_HFR_per_year")
 
 
 lm(Crime_per_year ~ Mean_HFR_per_year, data = df_reg_1)
@@ -126,11 +124,14 @@ df_reg_2 <- data.frame(STATES = total_crime_per_state$STATE,
                        Crime_per_state = total_crime_per_state$n,
                        Mean_HFR_per_state = guns_per_state$mean_HFR_per_state)
 
-ggplot(df_reg_2, aes(x = Mean_HFR_per_state, y = Crime_per_state)) +
+df_reg_2 <- merge(total_crime_per_state, guns_per_state)
+names(df_reg_2) <- c("STATE", "Total_crime_per_state", "Mean_HFR_per_state")
+
+ggplot(df_reg_2, aes(x = Mean_HFR_per_state, y = Total_crime_per_state)) +
   geom_point() + 
   stat_smooth(method = "lm", col = "red")
 
-lm(Crime_per_state ~ Mean_HFR_per_state, df_reg_2)
+lm(Total_crime_per_state ~ Mean_HFR_per_state, df_reg_2)
 
 
 
@@ -171,25 +172,75 @@ data_pol_pref <- data_pol_pref_raw %>%
 
 
 ########## DATASET POPULAÇÃO ############
-data_pop <- read_csv("total_pop.csv") 
-data_pop <- data_pop %>%
+data_pop <- read_csv("total_pop.csv") %>%
   select(-c("X1")) 
-
 
 setDT(data_pop)
 data_pop_arranged <- melt(data_pop)
 names(data_pop_arranged) <- c("STATE", "YEAR", "POPULATION")
-data_pop_arranged <- as.data.frame(data_pop_arranged)
-data_pop_arranged <- data_pop_arranged[-c(1:50, 1351:1500),]
+data_pop_arranged <- as.data.frame(data_pop_arranged[-c(1:50, 1351:1500),])
 
 
 prop_crime_per_state_per_year <- merge(crime_per_state_per_year, data_pop_arranged) %>%
-  mutate(PROP_CRIME = n / POPULATION)
+  mutate(PROP_CRIME = n / POPULATION,
+         )
+
+
+#### Construindo o DataFrame correto ####
+df_reg <- merge(prop_crime_per_state_per_year, guns_per_state_per_year)
+df_reg <- merge(rascunho, guns_per_state)
+names(df_reg) <- c("STATE", "YEAR", "CRIME_PER_STATE_PER_YEAR", "POPULATION",
+                     "PROP_CRIME", "PROP_GUNS_PER_STATE_PER_YEAR",
+                     "MEAN_HFR_PER_STATE")
+df_reg$NUMBER_GUNS <- round(df_reg$POPULATION * df_reg$PROP_GUNS_PER_STATE_PER_YEAR, 0)
+
+
+ggplot(df_reg, aes(x = PROP_CRIME, y = PROP_GUNS_PER_STATE_PER_YEAR)) +
+  geom_point() +
+  stat_smooth(method = "lm", col = "red")
+
+
+ggplot(df_reg, aes(x = CRIME_PER_STATE_PER_YEAR, y = NUMBER_GUNS)) +
+  geom_point() +
+  stat_smooth(method = "lm", col = "red") +
+  labs(title = "Guns vs Crimes", subtitle = "Year and State", x = "Number of guns", y = "Number of crimes")
+
+# Reg 1: crime ~ armas  
+summary(lm(CRIME_PER_STATE_PER_YEAR ~ NUMBER_GUNS, data = df_reg))
+
+# Reg 2: crime ~ armas + populações
+summary(lm(CRIME_PER_STATE_PER_YEAR ~ NUMBER_GUNS + POPULATION, data = df_reg))
+
+# Reg 3: crime ~ armas + estados 
+summary(lm(CRIME_PER_STATE_PER_YEAR ~ NUMBER_GUNS + factor(STATE), data = df_reg))
+
+
+ggplot(df_reg, aes(x = CRIME_PER_STATE_PER_YEAR, y = NUMBER_GUNS)) +
+  geom_point() +
+  stat_smooth(method = "lm", col = "red") +
+  facet_wrap(~ STATE) +
+  labs(title = "Guns vs Crimes", subtitle = "Year and State", x = "Number of guns", y = "Number of crimes")
+
+ggplot(df_reg, aes(x = CRIME_PER_STATE_PER_YEAR, y = NUMBER_GUNS)) +
+  geom_point() +
+  stat_smooth(method = "lm", col = "red") +
+  facet_wrap(~ YEAR) +
+  labs(title = "Guns vs Crimes", subtitle = "Year and State", x = "Number of guns", y = "Number of crimes")
 
 
 
 
 
+lm(Crime_per_year ~ Mean_HFR_per_year, data = df_reg_1)
+
+
+ggplot(df_reg_1, aes(x = Mean_HFR_per_year, y = Crime_per_year)) +
+  geom_point() +
+  stat_smooth(method = "lm", col = "red")
+
+
+#### REGRESSÕES ####
+summary(lm(HFR ~ universl + factor(YEAR) + STATE, guns_dataset))
 
 
 
