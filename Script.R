@@ -67,7 +67,7 @@ total_crime_per_etnia
 total_crime_per_victim <- hate_crime_dataset %>%
   group_by(YEAR, STATE) %>%
   count(BIAS_DESC)
-total_crime_per_victim
+total_crime_per_victim_corrigido <- subset(total_crime_per_victim, BIAS_DESC != 'Anti-White')
 
 
 ### DADOS QUE FAZEM SENTIDO ###
@@ -77,7 +77,7 @@ hate_crime <- hate_crime_dataset %>%
 
 
 
-################################# GUNS DATASET ###############################
+########################### GUNS DATASET ###############################
 
 # Importação dos dados
 guns_dataset <- read_excel('TL-354-State-Level Estimates of Household Firearm Ownership.xlsx', sheet = 2) %>%
@@ -176,7 +176,7 @@ ggplot(df_reg, aes(x = CRIME_PER_STATE_PER_YEAR, y = NUMBER_GUNS)) +
   stat_smooth(method = "lm", col = "red") +
   labs(title = "Guns vs Crimes", subtitle = "Year and State", x = "Number of guns", y = "Number of crimes")
 
-# Reg 1.a: total crimes ~ total armas  
+# Reg 1.a: total crimes ~ total armas
 lm1a <- lm(CRIME_PER_STATE_PER_YEAR ~ NUMBER_GUNS, data = df_reg)
 summary(lm1a)
 
@@ -225,6 +225,20 @@ summary(lm4)
 # REG 5 -> HFR ~ PERMIT -> como o permit impacta HFR 
 lm5 <- lm(HFR ~ permit + factor(YEAR) + STATE, guns_dataset)
 summary(lm5)
+
+
+
+############### DATASET PREFS POLÍTICAS #############
+# IMPORTAÇÃO DOS DADOS E FILTRAGEM INICIAL
+elections_data <- get(load("1976-2020-president.RData")) %>%
+  filter(year >= 1980, party_simplified != "OTHER")
+         
+         
+
+# Partidos que ganharam por ano por estado:
+elections_data %>%
+  select(year, state, party_simplified, candidatevotes) %>%
+  group_by(year, state)
 
 
 
