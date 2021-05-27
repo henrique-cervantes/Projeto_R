@@ -236,12 +236,89 @@ elections_data <- get(load("1976-2020-president.RData")) %>%
          
 
 # Partidos que ganharam por ano por estado:
-elections_data %>%
+president <- elections_data %>%
   select(year, state, party_simplified, candidatevotes) %>%
   group_by(year, state)
+president
+
+
+length(president$candidatevotes)
+
+# for loop pra achar os candidatos mais votados por estado por ano:
+
+republican_votes <- president %>%
+  filter(party_simplified == "REPUBLICAN")
+republican_votes
+
+democrat_votes <- president %>%
+  filter(party_simplified == "DEMOCRAT")
+democrat_votes
+
+i <- 1
+most_voted_party <- c() 
+votes_winner <- c()
+votes_loser <- c()
+while (i <= 562) {
+  if (republican_votes[i, 4] > democrat_votes[i, 4]) {
+    most_voted_party <- c(most_voted_party, "REPUBLICAN")
+    votes_winner <- c(votes_winner, republican_votes[i, 4])
+    votes_loser <- c(votes_loser, democrat_votes[i, 4])
+    i = i + 1
+  }
+  if (democrat_votes[i, 4] > republican_votes[i, 4]) {
+    most_voted_party <- c(most_voted_party, "DEMOCRAT")
+    votes_winner <- c(votes_loser, democrat_votes[i,4])
+    votes_loser <- c(votes_loser, republican_votes[i, 4])
+    i = i + 1
+  } 
+}
+
+# daqui pra baixo é só caos e tristeza
+
+votes_winner <- data.frame(WINNER_VOTES = votes_winner)
+
+
+president_2 <- president[c(seq(1, length(president$year), 3)),] %>%
+  select("year", 'state')
+
+year <- rep(seq(1980, 2020, 4), 51)
+state <- unique(president$state)
+
+df_elections <- data.frame(YEAR = president_2$year,
+                           STATE = president_2$state,
+                           MOST_VOTED_PARTY = most_voted_party,
+                           WINNER_VOTES = votes_winner,
+                           LOSER_VOTES = votes_loser)
+
+
+president <- merge(president, most_voted_party)
+president
+
+
+i <- 1
+lista <- c() 
+while (i <= 562) {
+  if (republican_votes[i,4] > democrat_votes[i,4] & republican_votes[i,4] > libertarian_votes[i,4]) {
+    lista <- c(lista, "REPUBLICAN")
+    i = i + 1
+  }
+  if (libertarian_votes[i,4] > republican_votes[i,4] & libertarian_votes[i,4] > democrat_votes[i,4]){
+    lista <- c(lista, "LIBERTARIAN")
+    i = i + 1
+  }
+  if (democrat_votes[i,4] > republican_votes[i,4] & democrat_votes[i,4] > libertarian_votes[i,4]) {
+    lista <- c(lista, "DEMOCRAT")
+    i = i + 1
+  } 
+}
 
 
 
+
+setDT(president)
+elections_data_arranged <- melt(president)
+
+elections_data_arranged
 
 
 ### DESCRIÇÃO DOS DADOS DE GUNS ###
