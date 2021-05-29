@@ -63,11 +63,58 @@ total_crime_per_etnia <- hate_crime_dataset %>%
   count(OFFENDER_RACE)
 total_crime_per_etnia
 
+# offender race (tá certo):
+unique(total_crime_per_etnia$OFFENDER_RACE)
+
+
 # Total de CRIMES por VÍTIMA por ESTADO por ANO
 total_crime_per_victim <- hate_crime_dataset %>%
   group_by(YEAR, STATE) %>%
   count(BIAS_DESC)
+total_crime_per_victim
+unique(total_crime_per_victim$BIAS_DESC)
+
+# sem white
 total_crime_per_victim_corrigido <- subset(total_crime_per_victim, BIAS_DESC != 'Anti-White')
+
+
+# black/afican american
+anti_black <- data.frame()
+
+# anti
+anti_arab <- c()
+anti_asian <-c()
+anti_jewish <- c()
+
+anti_islamic <- c()
+anti_asianreligion <- c()
+anti_christian <- c()
+
+
+anti_female <- c()
+anti_lgbt <- c()
+
+anti_disability <- c()
+anti_
+
+n = 1
+if (hate_crime_dataset[n, "BIAS_DESC"] == grepl("Anti_BLack"))) {
+  anti_black <- c(anti_black, hate_crime_dataset[n,])
+  n = n + 1
+}
+
+anti_black <- subset(hate_crime_dataset, BIAS_DESC == "Anti-Black")
+anti_black
+
+anti_black <- hate_crime_dataset[hate_crime_dataset$BIAS_DESC == "Anti-Black",]
+
+
+anti_black <- substring(hate_crime_dataset$BIAS_DESC, "Anti-White")
+
+
+#hate_crime_dataset %>%
+#  select(BIAS_DESC, contains("Anti-Black"))
+
 
 
 ### DADOS QUE FAZEM SENTIDO ###
@@ -255,23 +302,52 @@ democrat_votes <- president %>%
 democrat_votes
 
 i <- 1
-most_voted_party <- c() 
-votes_winner <- c()
-votes_loser <- c()
+most_voted_party <- as.double(c())
+votes_winner <- as.double(c())
+votes_loser <- as.double(c())
 while (i <= 562) {
   if (republican_votes[i, 4] > democrat_votes[i, 4]) {
     most_voted_party <- c(most_voted_party, "REPUBLICAN")
-    votes_winner <- c(votes_winner, republican_votes[i, 4])
-    votes_loser <- c(votes_loser, democrat_votes[i, 4])
+    votes_winner <- as.double(c(votes_winner, republican_votes[i, 4]))
+    votes_loser <- as.double(c(votes_loser, democrat_votes[i, 4]))
     i = i + 1
   }
   if (democrat_votes[i, 4] > republican_votes[i, 4]) {
-    most_voted_party <- c(most_voted_party, "DEMOCRAT")
-    votes_winner <- c(votes_loser, democrat_votes[i,4])
-    votes_loser <- c(votes_loser, republican_votes[i, 4])
+    most_voted_party <-c(most_voted_party, "DEMOCRAT")
+    votes_winner <- as.double(c(votes_winner, democrat_votes[i,4]))
+    votes_loser <- as.double(c(votes_loser, republican_votes[i, 4]))
     i = i + 1
   } 
 }
+
+most_voted_party <- as.data.frame(most_voted_party)
+votes_winner <- as.data.frame(votes_winner)
+votes_loser <- as.data.frame(votes_loser)
+
+
+year <- c(rep(seq(1980, 2020, 4), 51), NaN)
+state <- rep(unique(president$state), 11)
+
+state <- c(state, NaN)
+
+
+# Tenho que arrumar os anos 
+df_elections <- data.frame(YEAR = year,
+                           STATE = state,
+                           MOST_VOTED_PARTY = most_voted_party,
+                           WINNER_VOTES = votes_winner,
+                           LOSER_VOTES = votes_loser)
+
+
+# tem um dado a mais 
+
+
+
+
+
+
+
+
 
 # daqui pra baixo é só caos e tristeza
 
