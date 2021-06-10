@@ -218,8 +218,8 @@ hate_crime_dataset <- hate_crime_dataset %>%
   mutate(ANTI_HETEROSEXUAL = ifelse(str_detect(BIAS_DESC, "Anti-Heterosexual"), 1, 0))
 
 # ANTI_GAY.1
-#hate_crime_dataset <- hate_crime_dataset %>% 
-#  mutate(ANTI_GAY = ifelse(str_detect(BIAS_DESC, "Anti-Gay (Male)"), 1, 0))
+hate_crime_dataset <- hate_crime_dataset %>% 
+  mutate(ANTI_GAY = ifelse(str_detect(BIAS_DESC, "Anti-Gay (Male)"), 1, 0))
 
 # ANTI_GAY.2
 hate_crime_dataset <- hate_crime_dataset %>% 
@@ -290,12 +290,42 @@ ggplot(cab_per_state_per_year, aes(x = YEAR, n)) +
   geom_line() +
   facet_wrap(~STATE)
 
+# PLOTANDO VÍTIMAS MULHERES POR ESTADO POR ANO
+caf_per_state_per_year <- hate_crime_dataset %>%
+  filter(str_detect(BIAS_DESC, "Female")) %>%
+  group_by(YEAR) %>%
+  count(STATE)
+caf_per_state_per_year
+
+ggplot(cab_per_state_per_year, aes(x = YEAR, n)) +
+  geom_line() +
+  facet_wrap(~STATE)
 
 
-# REGRESSÃO
+
+# reduce
+a <- hate_crime_dataset %>%
+  group_by(STATE, YEAR) %>%
+#  summarise(across(str_detect("ANTI"), sum))
+#  summarise(across(select(("ANTI"), sum))
+  summarise(across(starts_with("ANTI"), sum))
 
 
 
+b <- full_join(guns_dataset, a)
+
+b %>%
+  replace(NaN, 0)
+
+
+b[is.na(b)]<-0
+
+
+# regressao
+summary(lm(ANTI_BLACK ~ permit + factor(YEAR) + factor(STATE), b))
+
+
+# fazer para várias categorias
 
 
 
@@ -306,7 +336,6 @@ ggplot(cab_per_state_per_year, aes(x = YEAR, n)) +
 ggplot(hate_crime_dataset, aes(x = YEAR, y = ANTI_BLACK)) +
     geom_line() +
     facet_wrap(~ STATE)
-
 
 
 
