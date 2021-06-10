@@ -52,10 +52,25 @@ ggplot(crime_per_state_per_year, aes(x = YEAR, y = n)) +
 
 
 
-# Total de CRIMES por TIPO
+# Total de CRIMES por TIPO por ESTADO por ANO
 total_crime_per_type <- hate_crime_dataset %>%
+  group_by(YEAR, STATE) %>%
   count(OFFENSE_NAME)
-total_crime_per_type[order(-total_crime_per_type$n),]
+total_crime_per_type
+#total_crime_per_type[order(-total_crime_per_type$n),]
+# tipos de crimes
+sort(unique(total_crime_per_type$OFFENSE_NAME))
+
+
+
+# Total de CRIMES por LUGAR por ESTADO por ANO
+total_crime_per_location <- hate_crime_dataset %>%
+  group_by(YEAR, STATE) %>%
+  count(LOCATION_NAME)
+total_crime_per_location
+
+sort(unique(total_crime_per_location$LOCATION_NAME))
+
 
 
 # Total de CRIMES por ETNIA por ESTADO por ANO
@@ -261,6 +276,33 @@ hate_crime_dataset <- hate_crime_dataset %>%
 sum(hate_crime_dataset$ANTI_BLACK)
 
 
+
+
+
+# PLOTANDO VÍTIMAS NEGRAS POR ESTADO POR ANO 
+cab_per_state_per_year <- hate_crime_dataset %>%
+  filter(str_detect(BIAS_DESC, "Black")) %>%
+  group_by(YEAR) %>%
+  count(STATE)
+cab_per_state_per_year
+
+ggplot(cab_per_state_per_year, aes(x = YEAR, n)) +
+  geom_line() +
+  facet_wrap(~STATE)
+
+
+
+# REGRESSÃO
+
+
+
+
+
+
+
+
+
+
 ggplot(hate_crime_dataset, aes(x = YEAR, y = ANTI_BLACK)) +
     geom_line() +
     facet_wrap(~ STATE)
@@ -424,7 +466,8 @@ summary(lm4)
 lm5 <- lm(HFR ~ permit + factor(YEAR) + STATE, guns_dataset)
 summary(lm5)
 
-
+# REG 6 -> crime ~ vítimas negras 
+lm6 <- lm(df_reg$CRIME_PER_STATE_PER_YEAR ~ hb$n)
 
 
 
@@ -479,12 +522,10 @@ votes_winner <- as.data.frame(votes_winner)
 votes_loser <- as.data.frame(votes_loser)
 
 
-year <- sort(c(rep(seq(1980, 2020, 4), 51)))
-year <- c(year, NaN)
+year <- c(sort(c(rep(seq(1980, 2020, 4), 51))), NaN)
 
-state <- rep(unique(president$state), 11)
+state <- c(rep(unique(president$state), 11), NaN)
 
-state <- c(state, NaN)
 
 
 # df com ganhadores e numero de votos por ano por estado 
@@ -504,9 +545,9 @@ df_elections <- data.frame(YEAR = year,
 
 
 
-
-# daqui pra baixo é só caos e tristeza
-
+############################################################################
+############################### RASCUNHO ######################################
+############################################################################
 votes_winner <- data.frame(WINNER_VOTES = votes_winner)
 
 
