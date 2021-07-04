@@ -21,7 +21,7 @@ names(hate_crime_dataset)[names(hate_crime_dataset) == "DATA_YEAR"] <- "YEAR"
 names(hate_crime_dataset)[names(hate_crime_dataset) == "STATE_NAME"] <- "STATE"
 
 
-#### ANÁLISE INICIAL DOS DADOS HATE_CRIME ####
+########## ANÁLISE INICIAL DOS DADOS HATE_CRIME ####
 
 # Crimes por ANO 
 total_crime_per_year <- hate_crime_dataset %>%
@@ -52,7 +52,7 @@ ggplot(crime_per_state_per_year, aes(x = YEAR, y = n)) +
 
 
 
-# Total de CRIMES por TIPO por ESTADO por ANO
+########## Total de CRIMES por TIPO por ESTADO por ANO ###############
 total_crime_per_type <- hate_crime_dataset %>%
   group_by(YEAR, STATE) %>%
   count(OFFENSE_NAME)
@@ -63,7 +63,8 @@ sort(unique(total_crime_per_type$OFFENSE_NAME))
 
 
 
-# Total de CRIMES por LUGAR por ESTADO por ANO
+########## Total de CRIMES por LUGAR por ESTADO por ANO ################
+
 total_crime_per_location <- hate_crime_dataset %>%
   group_by(YEAR, STATE) %>%
   count(LOCATION_NAME)
@@ -71,9 +72,7 @@ total_crime_per_location
 
 sort(unique(total_crime_per_location$LOCATION_NAME))
 
-
-
-# Total de CRIMES por ETNIA por ESTADO por ANO
+########## Total de CRIMES por ETNIA por ESTADO por ANO #############
 total_crime_per_etnia <- hate_crime_dataset %>%
   group_by(YEAR, STATE) %>%
   count(OFFENDER_RACE)
@@ -83,7 +82,7 @@ total_crime_per_etnia
 unique(total_crime_per_etnia$OFFENDER_RACE)
 
 
-# Total de CRIMES por VÍTIMA por ESTADO por ANO
+########## Total de CRIMES por VÍTIMA por ESTADO por ANO #######
 total_crime_per_victim <- hate_crime_dataset %>%
   group_by(YEAR, STATE) %>%
   count(BIAS_DESC)
@@ -96,19 +95,23 @@ total_crime_per_victim_corrigido <- subset(total_crime_per_victim, BIAS_DESC != 
 
 
 
-######################## CONSTRUINDO A DISTRIBUIÇÃO POR VÍTIMA ##################################3
+
+
+######################## CONSTRUINDO A DISTRIBUIÇÃO POR VÍTIMA ######################
+
+############################ ANTI MULHER/HOMEM ############
 
 # ANTI_FEMALE
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_FEMALE = ifelse(str_detect(BIAS_DESC, "Anti-Female"), 1, 0))
+
 
 # ANTI_MALE (n faz sentido)
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_MALE = ifelse(str_detect(BIAS_DESC, "Anti-Male"), 1, 0))
 
 
-
-########################################## ETNIAS #########################################3
+############################ ETNIAS ############################
 
 # ANTI_WHITE (n faz sentido)
 hate_crime_dataset <- hate_crime_dataset %>% 
@@ -119,9 +122,11 @@ hate_crime_dataset <- hate_crime_dataset %>%
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_BLACK = ifelse(str_detect(BIAS_DESC, 'Anti-Black or African American'), 1, 0))
 
+
 # ANTI-ASIAN
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_ASIAN = ifelse(str_detect(BIAS_DESC, 'Anti-Asian'), 1, 0))
+
 
 # ANTI-JEWISH 
 hate_crime_dataset <- hate_crime_dataset %>% 
@@ -135,115 +140,113 @@ hate_crime_dataset <- hate_crime_dataset %>%
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_HISPANIC = ifelse(str_detect(BIAS_DESC, "Anti-Hispanic or Latino"), 1, 0))
 
+
 # ANTI-NATIVE
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_NATIVE = ifelse(str_detect(BIAS_DESC, "Anti-American Indian or Alaska Native"), 1, 0))
 
+
 # ANTI-HAWAIIAN
 hate_crime_dataset <- hate_crime_dataset %>% 
-  mutate(ANTI_HINDU = ifelse(str_detect(BIAS_DESC, "Anti-Native Hawaiian or Other Pacific Islander"), 1, 0))
+  mutate(ANTI_HAWAIIAN = ifelse(str_detect(BIAS_DESC, "Anti-Native Hawaiian or Other Pacific Islander"), 1, 0))
+
 
 # ANTI_HINDU
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_HINDU = ifelse(str_detect(BIAS_DESC, "Anti-Hindu"), 1, 0))
 
+
 # ANTI-OTHER-RACE
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_OTHER_RACE = ifelse(str_detect(BIAS_DESC, "Anti-Other Race/Ethnicity/Ancestry"), 1, 0))
+
 
 # ANTI_MULTIPLE_RACES
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_MULT_RACE = ifelse(str_detect(BIAS_DESC, "Anti-Multiple Races, Group"), 1, 0))
 
-
-
-######################################## RELIGIÕES ########################################
+############################ RELIGIÕES ########################################
 
 # ANTI-ISLAMIC
 hate_crime_dataset <- hate_crime_dataset %>% 
-  mutate(ANTI_ISLAMIC = ifelse(str_detect(BIAS_DESC, "Anti-Islamic (Muslim)"), 1, 0))
-
-mean(hate_crime_dataset$ANTI_ISLAMIC)
+  mutate(ANTI_ISLAMIC = ifelse(str_detect(BIAS_DESC, "Anti-Islamic"), 1, 0))
 
 # ANTI-SIKH
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_SIKH = ifelse(str_detect(BIAS_DESC, "Anti-Sikh"), 1, 0))
 
+
 # ANTI-BUDDHIST
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_BUDDHIST = ifelse(str_detect(BIAS_DESC, "Anti-Buddhist"), 1, 0))
+
 
 # ANTI-JEHOVAH'S WITNESS
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_JEHOVAHS_WITNESS = ifelse(str_detect(BIAS_DESC, "Anti-Jehovah's Witness"), 1, 0))
 
+
 # ANTI-CATHOLIC
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_CATHOLIC = ifelse(str_detect(BIAS_DESC, "Anti-Catholic"), 1, 0))
+
 
 # ANTI-PROTESTANT
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_PROTESTANT = ifelse(str_detect(BIAS_DESC, "Anti-Protestant"), 1, 0))
 
+
 # ANTI_MORMON
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_MORMON = ifelse(str_detect(BIAS_DESC, "Anti-Mormon"), 1, 0))
 
+
 # ANTI_ORTHODOX
 hate_crime_dataset <- hate_crime_dataset %>% 
-  mutate(ANTI_ORTHODOX = ifelse(str_detect(BIAS_DESC, "Anti-Eastern Orthodox (Russian, Greek, Other)"), 1, 0))
+  mutate(ANTI_ORTHODOX = ifelse(str_detect(BIAS_DESC, "Anti-Eastern Orthodox"), 1, 0))
+
 
 # ANTI-ATHEISM
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_ATHEISM = ifelse(str_detect(BIAS_DESC, "Anti-Atheism/Agnosticism"), 1, 0))
 
+
 # ANTI_OTHER_CHRISTIAN
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_OTHER_CHRISTIAN = ifelse(str_detect(BIAS_DESC, "Anti-Other Christian"), 1, 0))
 
+
 # ANTI_OTHER_RELIGION
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_OTHER_RELIGION = ifelse(str_detect(BIAS_DESC, "Anti-Other Religion"), 1, 0))
+
 
 # ANTI_MULTIPLE_RELIGIONS
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_MULT_RELIGIONS = ifelse(str_detect(BIAS_DESC, "Anti-Multiple Religions, Group"), 1, 0))
 
 
-
-############################################## LGBT+ ##############################
+############################ LGBT+ ##############################
 
 # ANTI_HETEROSEXUAL (n faz sentido)
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_HETEROSEXUAL = ifelse(str_detect(BIAS_DESC, "Anti-Heterosexual"), 1, 0))
 
-# ANTI_GAY.1
-hate_crime_dataset <- hate_crime_dataset %>% 
-  mutate(ANTI_GAY = ifelse(str_detect(BIAS_DESC, "Anti-Gay (Male)"), 1, 0))
 
 # ANTI_GAY.2
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_GAY = ifelse(str_detect(BIAS_DESC, "Gay"), 1, 0))
 
-# ANTI_LESBIAN.1
-#hate_crime_dataset <- hate_crime_dataset %>% 
-#  mutate(ANTI_LESBIAN = ifelse(str_detect(BIAS_DESC, "Anti-Lesbian (Female)"), 1, 0))
 
 # ANTI_LESBIAN.2
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_LESBIAN = ifelse(str_detect(BIAS_DESC, "Lesbian"), 1, 0))
 
-# ANTI_BISEXUAL.1
-#hate_crime_dataset <- hate_crime_dataset %>% 
-#  mutate(ANTI_BISEXUAL = ifelse(str_detect(BIAS_DESC, "Anti-Bisexual"), 1, 0))
 
 # ANTI_BISEXUAL.2
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_BISEXUAL = ifelse(str_detect(BIAS_DESC, "Bisexual"), 1, 0))
 
-# ANTI_TRANSGENDER.1
-#hate_crime_dataset <- hate_crime_dataset %>% 
-#  mutate(ANTI_TRANSGENDER = ifelse(str_detect(BIAS_DESC, "Anti-Transgender"), 1, 0))
 
 # ANTI_TRANSGENDER.2
 hate_crime_dataset <- hate_crime_dataset %>% 
@@ -257,11 +260,10 @@ hate_crime_dataset <- hate_crime_dataset %>%
 
 # ANTI-LGBT+ GENÉRICO
 hate_crime_dataset <- hate_crime_dataset %>% 
-  mutate(ANTI_OTHER_LGBT = ifelse(str_detect(BIAS_DESC, "Anti-Lesbian, Gay, Bisexual, or Transgender (Mixed Group)"), 1, 0))
+  mutate(ANTI_OTHER_LGBT = ifelse(str_detect(BIAS_DESC, "Anti-Lesbian, Gay, Bisexual, or Transgender"), 1, 0))
 
 
-
-####################################### CAPACITISMO ######################################
+############################ cAPACITISMO ######################################
 
 # ANTI_MENTAL_DISABILITY
 hate_crime_dataset <- hate_crime_dataset %>% 
@@ -271,11 +273,8 @@ hate_crime_dataset <- hate_crime_dataset %>%
 hate_crime_dataset <- hate_crime_dataset %>% 
   mutate(ANTI_PHYSICAL_DIS = ifelse(str_detect(BIAS_DESC, "Anti-Physical Disability"), 1, 0))
 
+
 ############################ FIM DAS CORREÇÕES DE VICTIM BIAS ################ 
-
-sum(hate_crime_dataset$ANTI_BLACK)
-
-
 
 
 
@@ -312,22 +311,43 @@ a <- hate_crime_dataset %>%
 
 
 
-b <- full_join(guns_dataset, a)
-
-b %>%
-  replace(NaN, 0)
-
-
+b <- full_join(guns_dataset, a) 
 b[is.na(b)]<-0
 
 
-# regressao
-summary(lm(ANTI_BLACK ~ permit + factor(YEAR) + factor(STATE), b))
+# regressao - black
+reg_black <- summary(lm(ANTI_BLACK ~ permit + factor(YEAR) + factor(STATE), b))
+coef(reg_black)[1]
+     
+# regressao - female
+reg_female <- summary(lm(ANTI_FEMALE ~ permit + factor(YEAR) + factor(STATE), b))
+coef(reg_female)[1]
 
+# regressao - islamic
+reg_islamic <- summary(lm(ANTI_ISLAMIC ~ permit + factor(YEAR) + factor(STATE), b))
+coef(reg_islamic)[1]
+
+  
+# regressao - 
+
+str_detect(colnames(b), "ANTI")
+
+
+b[,c(20:length(b))]
+
+# fazer para várias categorias
+for (col in str_detecttcolnames(b)){
+  if (str_detect(col, "ANTI")){
+    summary(lm(b$col ~ permit + factor(YEAR) + factor(STATE), b))
+  }
+}
 
 # fazer para várias categorias
 
 
+for (i in b[,c(20:length(b))]){
+  summary(lm(i ~ permit + factor(YEAR) + factor(STATE), b))
+}
 
 
 
