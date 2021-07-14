@@ -343,7 +343,6 @@ for (col in str_detecttcolnames(b)){
 
 # fazer para várias categorias
 
-
 for (i in b[,c(20:length(b))]){
   summary(lm(i ~ permit + factor(YEAR) + factor(STATE), b))
 }
