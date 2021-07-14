@@ -7,7 +7,6 @@ library(data.table)
 library(stargazer)
 library(stringr)
 
-
 #### HATE CRIME ####
 
 # IMPORTAÇÃO DATASET HATE_CRIME
