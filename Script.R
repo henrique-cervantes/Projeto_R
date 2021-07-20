@@ -25,37 +25,52 @@ names(hate_crime_dataset)[names(hate_crime_dataset) == "STATE_NAME"] <- "STATE"
 # Crimes por ANO 
 total_crime_per_year <- hate_crime_dataset %>%
   count(YEAR)
-# Ordernado decrescente:
-total_crime_per_year[order(-total_crime_per_year$n),]
+# Ordernado decrescente ou crescente:
+arrange(total_crime_per_year, desc(n))
 
 
 
 # Crimes por ESTADO 
 total_crime_per_state <- hate_crime_dataset %>%
-  count(STATE)
-total_crime_per_state <- total_crime_per_state[-c(12),]
-# Ordernado decrescente:
-total_crime_per_state[order(-total_crime_per_state$n),]
+  count(STATE) %>%
+  filter(STATE != 'Guam') 
+# Ordernado decrescente ou crescente:
+arrange(total_crime_per_state, desc(n))
 
 
 # Crimes por ESTADO por ANO
 crime_per_state_per_year <- hate_crime_dataset %>%
   group_by(YEAR) %>%
-  count(STATE)
+  count(STATE) %>%
+  arrange(desc(n))
+
 crime_per_state_per_year
 
-# TRENDLINE CRIME por ESTADO por ANO
+# TRENDLINE CRIME por ESTADO por ANO:
 ggplot(crime_per_state_per_year, aes(x = YEAR, y = n)) +
-  geom_line() +
-  facet_wrap(~ STATE)
+    geom_line() +
+    facet_wrap(~ STATE)
 
-
+# Plotando os 5 estados com mais crimes ao longo dos anos:
+crime_per_state_per_year %>%
+  filter(STATE == c(arrange(total_crime_per_state, desc(n))[1:5, 1])) %>%
+  ggplot(aes(x = YEAR, y = n)) +
+    geom_line() +
+    facet_wrap(~ STATE)
+  
 
 ########## Total de CRIMES por TIPO por ESTADO por ANO ###############
 total_crime_per_type <- hate_crime_dataset %>%
   group_by(YEAR, STATE) %>%
   count(OFFENSE_NAME)
 total_crime_per_type
+
+total_crime_per_type %>%
+  select(OFFENSE_NAME, n) %>%
+  arrange(desc(n))
+
+arrange(total_crime_per_type, desc(n))
+
 #total_crime_per_type[order(-total_crime_per_type$n),]
 # tipos de crimes
 sort(unique(total_crime_per_type$OFFENSE_NAME))
@@ -276,7 +291,6 @@ hate_crime_dataset <- hate_crime_dataset %>%
 ############################ FIM DAS CORREÇÕES DE VICTIM BIAS ################ 
 
 
-
 # PLOTANDO VÍTIMAS NEGRAS POR ESTADO POR ANO 
 cab_per_state_per_year <- hate_crime_dataset %>%
   filter(str_detect(BIAS_DESC, "Black")) %>%
@@ -284,9 +298,21 @@ cab_per_state_per_year <- hate_crime_dataset %>%
   count(STATE)
 cab_per_state_per_year
 
-ggplot(cab_per_state_per_year, aes(x = YEAR, n)) +
+arrange(cab_per_state_per_year, desc(n))
+
+ggplot(cab_per_state_per_year, aes(x = YEAR, y = n)) +
   geom_line() +
   facet_wrap(~STATE)
+
+
+cab_per_state_per_year %>%
+  filter(n > 200) %>%
+  ggplot(aes(x = YEAR, y = n)) +
+    geom_point() + 
+    stat_smooth(method = "lm", col = "red")
+  
+
+
 
 # PLOTANDO VÍTIMAS MULHERES POR ESTADO POR ANO
 caf_per_state_per_year <- hate_crime_dataset %>%
@@ -295,69 +321,116 @@ caf_per_state_per_year <- hate_crime_dataset %>%
   count(STATE)
 caf_per_state_per_year
 
-ggplot(cab_per_state_per_year, aes(x = YEAR, n)) +
+ggplot(caf_per_state_per_year, aes(x = YEAR, n)) +
   geom_line() +
   facet_wrap(~STATE)
+
+cab_per_state_per_year %>%
+  filter(n > 200) %>%
+  ggplot(aes(x = YEAR, y = n)) +
+  geom_point() + 
+  stat_smooth(method = "lm", col = "red")
+
 
 
 
 # reduce
 a <- hate_crime_dataset %>%
   group_by(STATE, YEAR) %>%
-#  summarise(across(str_detect("ANTI"), sum))
-#  summarise(across(select(("ANTI"), sum))
   summarise(across(starts_with("ANTI"), sum))
-
 
 
 b <- full_join(guns_dataset, a) 
 b[is.na(b)]<-0
 
 
-# regressao - black
-reg_black <- summary(lm(ANTI_BLACK ~ permit + factor(YEAR) + factor(STATE), b))
-coef(reg_black)[1]
+# regressao - black ~ permit
+reg_black_permit <- summary(lm(ANTI_BLACK ~ permit + factor(YEAR) + factor(STATE), b))
+reg_black_permit
+coef(reg_black_permit)[1]
      
-# regressao - female
-reg_female <- summary(lm(ANTI_FEMALE ~ permit + factor(YEAR) + factor(STATE), b))
-coef(reg_female)[1]
+# regressao - female ~ permit
+reg_female_permit <- summary(lm(ANTI_FEMALE ~ permit + factor(YEAR) + factor(STATE), b))
+reg_female_permit
+coef(reg_female_permit)[1]
 
 # regressao - islamic
-reg_islamic <- summary(lm(ANTI_ISLAMIC ~ permit + factor(YEAR) + factor(STATE), b))
+reg_islamic_permit <- summary(lm(ANTI_ISLAMIC ~ permit + factor(YEAR) + factor(STATE), b))
+reg_islamic_permit
+coef(reg_islamic_permit)[1]
+
+# regressao - anti-lgbt ~ permit
+reg_lgbt_permit <- summary(lm(ANTI_GAY + ANTI_LESBIAN + ANTI_BISEXUAL + ANTI_TRANSGENDER + ANTI_GENDER_NON_CONF ~ permit + factor(YEAR) + factor(STATE), b))
+reg_lgbt_permit
+coef(reg_lgbt_permit)[1]
+
+
+
+# regressao - anti_black ~ universl
+reg_black_universl <- summary(lm(ANTI_BLACK ~ universl + factor(YEAR) + factor(STATE), b))
+reg_black_universl
+coef(reg_black_universl)[1]
+
+# regressao - anti_female ~ universl 
+reg_female_universl <- summary(lm(ANTI_FEMALE ~ universl + factor(YEAR) + factor(STATE), b))
+reg_female_universl
+coef(reg_female_universl)[1]
+
+# regressao - anti_islamic ~ universl 
+reg_islamic_universl <- summary(lm(ANTI_ISLAMIC ~ universl + factor(YEAR) + factor(STATE), b))
+reg_islamic_universl
+coef(reg_islamic_universl)[1]
+
+# regressao - anti_islamic ~ universl 
+reg_lgbt_universl <- summary(lm(ANTI_GAY + ANTI_LESBIAN + ANTI_BISEXUAL + ANTI_TRANSGENDER + ANTI_GENDER_NON_CONF ~ universl + factor(YEAR) + factor(STATE), b))
+reg_lgbt_universl
+coef(reg_lgbt_universl)[1]
+
+
+
+
+
+
+
+# regressao - anti-black ~ mean_hfr
+reg_black <- summary(lm(ANTI_BLACK ~ HFR + factor(YEAR) + factor(STATE), b))
+reg_black
+coef(reg_black)[1]
+
+b %>%
+  ggplot(aes(x = HFR, y = ANTI_BLACK)) +
+  geom_point()
+
+
+# regressao - anti_female ~ mean hfr
+reg_female <- summary(lm(ANTI_FEMALE ~ HFR + factor(YEAR) + factor(STATE), b))
+reg_female
+coef(reg_female)[1]
+
+b %>%
+  ggplot(aes(x = HFR, y = ANTI_FEMALE)) +
+  geom_point()
+
+
+# regressao - anti_islamic ~ mean hfr
+reg_islamic <- summary(lm(ANTI_ISLAMIC ~ HFR + factor(YEAR) + factor(STATE), b))
+reg_islamic
 coef(reg_islamic)[1]
 
-  
-# regressao - 
-
-str_detect(colnames(b), "ANTI")
-
-
-b[,c(20:length(b))]
-
-# fazer para várias categorias
-for (col in str_detecttcolnames(b)){
-  if (str_detect(col, "ANTI")){
-    summary(lm(b$col ~ permit + factor(YEAR) + factor(STATE), b))
-  }
-}
-
-# fazer para várias categorias
-
-for (i in b[,c(20:length(b))]){
-  summary(lm(i ~ permit + factor(YEAR) + factor(STATE), b))
-}
+b %>%
+  ggplot(aes(x = HFR, y = ANTI_ISLAMIC)) +
+  geom_point()
 
 
+# regressao - anti_LGBT ~ mean hfr
+reg_LGBT <- summary(lm(ANTI_GAY + ANTI_LESBIAN + ANTI_BISEXUAL + ANTI_TRANSGENDER + ANTI_GENDER_NON_CONF ~ HFR + factor(YEAR) + factor(STATE), b))
+reg_LGBT
+coef(reg_LGBT)[1]
 
 
-
-ggplot(hate_crime_dataset, aes(x = YEAR, y = ANTI_BLACK)) +
-    geom_line() +
-    facet_wrap(~ STATE)
-
-
-
-
+b %>%
+  ggplot(aes(x = HFR, y = c(ANTI_GAY + ANTI_LESBIAN + ANTI_BISEXUAL + ANTI_TRANSGENDER + ANTI_GENDER_NON_CONF))) +
+  geom_point()
 
 
 
@@ -663,76 +736,21 @@ elections_data_arranged
 # BS3 !Third blended linear spline-represents roughly 1993-2004
 
 
+# Estados que adotaram permit:
 
-
-hate_crime_dataset <- hate_crime_dataset %>% 
-  mutate(ANTI_BLACK = ifelse(BIAS_DESC == 'Anti-Black or African American', 1, 0))
-
-mean(hate_crime_dataset$ANTI_BLACK)
-
-hate_crime_dataset <- hate_crime_dataset %>% 
-  mutate(ANTI_BLACK = ifelse(grep('Anti-Black or African American', BIAS_DESC), 1, 0)))
-
-
-
-
-
-hate_crime_dataset$ANTI_BLACK <- ifelse(grep('Anti-Black or African American', hate_crime_dataset$BIAS_DESC), 1, 0)
-
-a <- ifelse(grep('Anti-Black or African American', hate_crime_dataset$BIAS_DESC), 2, 1)
-
-
-
-hate_crime_dataset
-
-# black/african american
-anti_black <- data.frame()
-
-# anti
-anti_arab <- c()
-anti_asian <-c()
-anti_jewish <- c()
-
-anti_islamic <- c()
-anti_asianreligion <- c()
-anti_christian <- c()
-
-anti_female <- c()
-anti_lgbt <- c()
-
-anti_disability <- c()
-anti_
-
-n = 1
-if (hate_crime_dataset[n, "BIAS_DESC"] == grepl("Anti_BLack")) {
-  anti_black <- c(anti_black, hate_crime_dataset[n,])
-  n = n + 1
-}
-
-anti_black <- subset(hate_crime_dataset, BIAS_DESC == "Anti-Black")
-anti_black
-
-anti_black <- hate_crime_dataset[hate_crime_dataset$BIAS_DESC == "Anti-Black",]
-
-
-anti_black <- substring(hate_crime_dataset$BIAS_DESC, "Anti-White")
-
-
-hate_crime_dataset %>%
-  select(BIAS_DESC, contains("Anti-Black"))
-
-anti_black <- hate_crime_dataset %>%
-  filter(BIAS_DESC == "Anti-Black or African American")
-
-
-
-anti_arab <- hate_crime_dataset %>%
-  filter(c(BIAS_DESC == "Anti-Black or African American", 
-  ))
-
-
-### DADOS QUE FAZEM SENTIDO ###
-hate_crime <- hate_crime_dataset %>%
-  filter(BIAS_DESC != "Anti-White") # talvez seja bom continuar daqui
-
-
+"""
+California - 1993
+Connecticut - 1993
+Hawaii - 1991
+Illinois - 1991
+Iowa - 1991
+Maryland - 2013
+Massachusetts - 1991
+Michigan - 1991
+Missouri - 1991 - 2006
+Nebraska - 1991
+New Jersey - 1991
+New Yorkk - 1991
+North Carolina - 1995
+Rhode Island - 1991
+"""
