@@ -6,6 +6,7 @@ library(infer)
 library(data.table)
 library(stargazer)
 library(stringr)
+library(dygraphs)
 
 #### HATE CRIME ####
 
@@ -20,6 +21,33 @@ names(hate_crime_dataset)[names(hate_crime_dataset) == "DATA_YEAR"] <- "YEAR"
 names(hate_crime_dataset)[names(hate_crime_dataset) == "STATE_NAME"] <- "STATE"
 
 
+#### GUNS ####
+# Importação dos dados
+guns_dataset <- read_excel('TL-354-State-Level Estimates of Household Firearm Ownership.xlsx', sheet = 2) %>%
+  filter(Year >= 1991) %>%
+  select(-c("FIP"))
+names(guns_dataset)[names(guns_dataset) == "Year"] <- "YEAR"
+
+
+
+
+
+#### POPULAÇÃO ####
+# IMPORTAÇÃO DOS DADOS
+data_pop <- read_csv("total_pop.csv") %>%
+  select(-c("X1")) 
+setDT(data_pop)
+data_pop_arranged <- melt(data_pop)
+names(data_pop_arranged) <- c("STATE", "YEAR", "POPULATION")
+data_pop_arranged <- as.data.frame(data_pop_arranged[-c(1:50, 1351:1500),])
+
+data_pop_arranged_2 <- data_pop_arranged %>%
+  arrange(STATE)
+
+
+
+
+
 ########## ANÁLISE INICIAL DOS DADOS HATE_CRIME ####
 
 # Crimes por ANO 
@@ -27,6 +55,15 @@ total_crime_per_year <- hate_crime_dataset %>%
   count(YEAR)
 # Ordernado decrescente ou crescente:
 arrange(total_crime_per_year, desc(n))
+
+#ggplot(total_crime_per_year, aes(x=YEAR, y=n)) + geom_line()
+
+dygraph(total_crime_per_year,
+        main = "Número de crimes de ódio por ano (agregado)",
+        ylab = "Crimes",
+        xlab = "Anos")
+
+predict(total_crime_per_year, n.ahead = 72, prediction.interval=TRUE)
 
 
 
@@ -36,6 +73,20 @@ total_crime_per_state <- hate_crime_dataset %>%
   filter(STATE != 'Guam') 
 # Ordernado decrescente ou crescente:
 arrange(total_crime_per_state, desc(n))
+
+# Crimes por ESTADO normalizado
+total_crime_per_state_norm <- b %>%
+  group_by(STATE, YEAR, POPULATION) %>%
+  summarise(across(starts_with("ANTI"), sum))
+
+
+
+
+
+total_crime_per_state_norm <- hate_crime_dataset %>%
+  group_by(STATE, YEAR) %>%
+  summarise(across(starts_with("ANTI"), sum))
+
 
 
 # Crimes por ESTADO por ANO
@@ -64,6 +115,7 @@ total_crime_per_type <- hate_crime_dataset %>%
   group_by(YEAR, STATE) %>%
   count(OFFENSE_NAME)
 total_crime_per_type
+
 
 total_crime_per_type %>%
   select(OFFENSE_NAME, n) %>%
@@ -288,6 +340,7 @@ hate_crime_dataset <- hate_crime_dataset %>%
   mutate(ANTI_PHYSICAL_DIS = ifelse(str_detect(BIAS_DESC, "Anti-Physical Disability"), 1, 0))
 
 
+
 ############################ FIM DAS CORREÇÕES DE VICTIM BIAS ################ 
 
 
@@ -303,6 +356,26 @@ arrange(cab_per_state_per_year, desc(n))
 ggplot(cab_per_state_per_year, aes(x = YEAR, y = n)) +
   geom_line() +
   facet_wrap(~STATE)
+
+# Para visualisar algum estado específico:
+
+func <- function(df, col, x) {
+df %>%
+  filter(col == x) %>%
+  dygraph(main = "Número de crimes de ódio por ano da categoria {}",
+          ylab = "Crimes",
+          xlab = "Anos")
+}
+
+func(cab_per_state_per_year, STATE, "Utah")
+
+
+cab_per_state_per_year %>%
+  filter(STATE == "California") %>%
+  dygraph(main = "Número de crimes de ódio por ano (agregado)",
+          ylab = "Crimes",
+          xlab = "Anos")
+
 
 
 cab_per_state_per_year %>%
@@ -344,11 +417,101 @@ b <- full_join(guns_dataset, a)
 b[is.na(b)]<-0
 
 
+b_new<- b %>%
+  mutate(across(starts_with("ANTI"), .fns = ~./POPULATION)) %>%
+
+b_new[which(is.nan(b_new))] <- 0
+b_new[which(b_new == Inf)] <- 0
+b_new[is.na(b_new)] <- 0
+
+
+
+####################### REGRESSAO N_GUNS ###########################
+
+# regressao - black ~ n_guns
+reg_black <- summary(lm(ANTI_BLACK ~ NUMBER_GUNS + factor(YEAR) + factor(STATE), b))
+reg_black
+coef(reg_black)[1]
+
+ggplot(b, aes(x = NUMBER_GUNS, y = ANTI_BLACK)) +
+  geom_point()
+
+
+reg_black <- summary(lm(ANTI_BLACK ~ NUMBER_GUNS + factor(YEAR) + factor(STATE), b_new))
+reg_black
+coef(reg_black)[1]
+
+ggplot(b_new, aes(x = NUMBER_GUNS, y = ANTI_BLACK)) +
+  geom_point()
+
+
+
+# regressao - female ~ n_guns
+reg_female <- summary(lm(ANTI_FEMALE ~ NUMBER_GUNS + factor(YEAR) + factor(STATE), b))
+reg_female
+coef(reg_female)[1]
+
+ggplot(b, aes(x = NUMBER_GUNS, y = ANTI_FEMALE)) +
+  geom_point()
+
+# regressao - islamic ~ n_guns
+reg_islamic <- summary(lm(ANTI_ISLAMIC ~ NUMBER_GUNS + factor(YEAR) + factor(STATE), b))
+reg_islamic
+coef(reg_islamic)[1]
+
+ggplot(b, aes(x = NUMBER_GUNS, y = ANTI_ISLAMIC)) +
+  geom_point()
+
+# regressao - anti-lgbt ~ n_guns
+reg_lgbt <- summary(lm(ANTI_GAY + ANTI_LESBIAN + ANTI_BISEXUAL + ANTI_TRANSGENDER + ANTI_GENDER_NON_CONF ~ NUMBER_GUNS + factor(YEAR) + factor(STATE), b))
+reg_lgbt
+coef(reg_lgbt)[1]
+
+ggplot(b, aes(x = NUMBER_GUNS, y = ANTI_GAY)) +
+  geom_point()
+
+####################### REGRESSÃO HFR ######################
+
+# regressao - black ~ n_guns
+reg_black_hfr <- summary(lm(ANTI_BLACK ~ HFR + factor(YEAR) + factor(STATE), b))
+reg_black_hfr
+coef(reg_black_hfr)[1]
+
+ggplot(b, aes(x = HFR, y = ANTI_BLACK)) +
+  geom_point()
+
+# regressao - female ~ n_guns
+reg_female_hfr <- summary(lm(ANTI_FEMALE ~ HFR + factor(YEAR) + factor(STATE), b))
+reg_female_hfr
+coef(reg_female_hfr)[1]
+
+ggplot(b, aes(x = HFR, y = ANTI_FEMALE)) +
+  geom_point()
+
+# regressao - islamic ~ n_guns
+reg_islamic_hfr <- summary(lm(ANTI_ISLAMIC ~ HFR + factor(YEAR) + factor(STATE), b))
+reg_islamic_hfr
+coef(reg_islamic_hfr)[1]
+
+ggplot(b, aes(x = HFR, y = ANTI_ISLAMIC)) +
+  geom_point()
+
+# regressao - anti-lgbt ~ n_guns
+reg_lgbt_hfr <- summary(lm(ANTI_GAY + ANTI_LESBIAN + ANTI_BISEXUAL + ANTI_TRANSGENDER + ANTI_GENDER_NON_CONF ~ HFR + factor(YEAR) + factor(STATE), b))
+reg_lgbt_hfr
+coef(reg_lgbt_hfr)[1]
+
+ggplot(b, aes(x = HFR, y = ANTI_GAY)) +
+  geom_point()
+
+
+####################### REGRESSÃO PERMIT #########################
+
 # regressao - black ~ permit
 reg_black_permit <- summary(lm(ANTI_BLACK ~ permit + factor(YEAR) + factor(STATE), b))
 reg_black_permit
 coef(reg_black_permit)[1]
-     
+
 # regressao - female ~ permit
 reg_female_permit <- summary(lm(ANTI_FEMALE ~ permit + factor(YEAR) + factor(STATE), b))
 reg_female_permit
@@ -359,17 +522,24 @@ reg_islamic_permit <- summary(lm(ANTI_ISLAMIC ~ permit + factor(YEAR) + factor(S
 reg_islamic_permit
 coef(reg_islamic_permit)[1]
 
+
 # regressao - anti-lgbt ~ permit
 reg_lgbt_permit <- summary(lm(ANTI_GAY + ANTI_LESBIAN + ANTI_BISEXUAL + ANTI_TRANSGENDER + ANTI_GENDER_NON_CONF ~ permit + factor(YEAR) + factor(STATE), b))
 reg_lgbt_permit
 coef(reg_lgbt_permit)[1]
 
-
+####################### REGRESSÃO UNIVERSL ############################
 
 # regressao - anti_black ~ universl
 reg_black_universl <- summary(lm(ANTI_BLACK ~ universl + factor(YEAR) + factor(STATE), b))
 reg_black_universl
 coef(reg_black_universl)[1]
+
+
+reg_black_universl <- summary(lm(ANTI_BLACK ~ universl + factor(YEAR) + factor(STATE), b))
+reg_black_universl
+coef(reg_black_universl)[1]
+
 
 # regressao - anti_female ~ universl 
 reg_female_universl <- summary(lm(ANTI_FEMALE ~ universl + factor(YEAR) + factor(STATE), b))
@@ -436,17 +606,7 @@ b %>%
 
 
 
-
-########################### GUNS DATASET ###############################
-
-# Importação dos dados
-guns_dataset <- read_excel('TL-354-State-Level Estimates of Household Firearm Ownership.xlsx', sheet = 2) %>%
-  filter(Year >= 1991) %>%
-  select(-c("FIP"))
-names(guns_dataset)[names(guns_dataset) == "Year"] <- "YEAR"
-
-
-##### ANÁLISE INICIAL DOS DADOS DE ARMAS #####
+########################### ANÁLISE INICIAL DOS DADOS DE ARMAS #####
 
 # HFR (proporção de armas por pessoa por estado) por ANO 
 guns_per_year <- guns_dataset %>%
@@ -462,6 +622,10 @@ guns_per_year[order(-guns_per_year$mean_HFR_per_year),]
 ggplot(guns_per_year, aes(x = YEAR, y = mean_HFR_per_year)) +
   geom_line()
 
+guns_per_year %>%
+  dygraph(main = "Armas por pessoa nos EUA entre 19901 e 2016",
+          ylab = "Armas",
+          xlab = "Anos")
 
 # HFR por ESTADO 
 guns_per_state <- guns_dataset %>%
@@ -484,30 +648,26 @@ ggplot(guns_dataset, aes(x = YEAR, y = HFR)) +
 
 
 
+
+
 ######## DADOS AGREGADOS CRIME feat.GUNS ########
 data_crime_guns <- merge(hate_crime_dataset, guns_dataset)
 
 data_crime_guns_2 <- merge(guns_dataset, hate_crime_dataset)
 
+#### certo
+guns_dataset$NUMBER_GUNS <- round(data_pop_arranged_2$POPULATION * guns_dataset$HFR)
 
-
-######## DATASET PREFERÊNCIAS POLÍTICAS ######## PARA FAZER!!!
-data_pol_pref_raw <- read_xlsx('Partisan_Balance_For_Use2011_06_09b.xlsx')
-names(data_pol_pref_raw)[names(data_pol_pref_raw) == "year"] <- "YEAR"
-names(data_pol_pref_raw)[names(data_pol_pref_raw) == "state"] <- "STATE"
-data_pol_pref <- data_pol_pref_raw %>%
-  filter(YEAR >= 1980)
+guns_dataset$POPULATION <- data_pop_arranged_2$POPULATION
+#### certo
 
 
 
-########################### DATASET POPULAÇÃO ###############################3
-# IMPORTAÇÃO DOS DADOS
-data_pop <- read_csv("total_pop.csv") %>%
-  select(-c("X1")) 
-setDT(data_pop)
-data_pop_arranged <- melt(data_pop)
-names(data_pop_arranged) <- c("STATE", "YEAR", "POPULATION")
-data_pop_arranged <- as.data.frame(data_pop_arranged[-c(1:50, 1351:1500),])
+guns_per_state_per_year$NUMBER_GUNS <- round(data_pop_arranged_2$population * df_)
+
+
+########################### DATASET POPULAÇÃO ####################
+
 
 # Adicionando uma coluna com a proporção de crimes na populaçao por estado ao longo do tempo:
 prop_crime_per_state_per_year <- merge(crime_per_state_per_year, data_pop_arranged) %>%
@@ -537,7 +697,7 @@ ggplot(df_reg, aes(x = CRIME_PER_STATE_PER_YEAR, y = NUMBER_GUNS)) +
   labs(title = "Guns vs Crimes", subtitle = "Year and State", x = "Number of guns", y = "Number of crimes")
 
 # Reg 1.a: total crimes ~ total armas
-lm1a <- lm(CRIME_PER_STATE_PER_YEAR ~ NUMBER_GUNS, data = df_reg)
+lm1a <- lm(CRIME_PER_STATE_PER_YEAR ~ NUMBER_GUNS + factor(YEAR) + factor(STATE), data = df_reg)
 summary(lm1a)
 
 
@@ -579,12 +739,14 @@ ggplot(df_reg, aes(x = CRIME_PER_STATE_PER_YEAR, y = NUMBER_GUNS)) +
 
 
 # REG 4: HFR ~ UNIVERSL -> como universl background checks impacta HFR 
-lm4 <- lm(HFR ~ universl + factor(YEAR) + STATE, guns_dataset)
-summary(lm4)
+lm4 <- summary(lm(HFR ~ universl + factor(YEAR) + factor(STATE), guns_dataset))
+coefficients(lm4)[1]
+
 
 # REG 5 -> HFR ~ PERMIT -> como o permit impacta HFR 
-lm5 <- lm(HFR ~ permit + factor(YEAR) + STATE, guns_dataset)
+lm5 <- lm(HFR ~ permit + factor(YEAR) + factor(STATE), guns_dataset)
 summary(lm5)
+coefficients(lm5)[1]
 
 # REG 6 -> crime ~ vítimas negras 
 lm6 <- lm(df_reg$CRIME_PER_STATE_PER_YEAR ~ hb$n)
@@ -660,7 +822,12 @@ df_elections <- data.frame(YEAR = year,
 
 
 
-
+######## DATASET PREFERÊNCIAS POLÍTICAS ######## PARA FAZER!!!
+data_pol_pref_raw <- read_xlsx('Partisan_Balance_For_Use2011_06_09b.xlsx')
+names(data_pol_pref_raw)[names(data_pol_pref_raw) == "year"] <- "YEAR"
+names(data_pol_pref_raw)[names(data_pol_pref_raw) == "state"] <- "STATE"
+data_pol_pref <- data_pol_pref_raw %>%
+  filter(YEAR >= 1980)
 
 
 
