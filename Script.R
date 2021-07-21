@@ -8,6 +8,7 @@ library(stargazer)
 library(stringr)
 library(dygraphs)
 
+
 #### HATE CRIME ####
 
 # IMPORTAÇÃO DATASET HATE_CRIME
