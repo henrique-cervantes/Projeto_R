@@ -7,10 +7,9 @@ library(data.table)
 library(stargazer)
 library(stringr)
 library(dygraphs)
-
+library(plotly)
 
 #### HATE CRIME ####
-
 # IMPORTAÇÃO DATASET HATE_CRIME
 hate_crime_dataset <- read.csv('hate_crime.csv') %>%
   select(-c('INCIDENT_ID', 'ORI', 'PUB_AGENCY_NAME',
@@ -20,8 +19,6 @@ hate_crime_dataset <- read.csv('hate_crime.csv') %>%
   filter(DATA_YEAR <= 2016) 
 names(hate_crime_dataset)[names(hate_crime_dataset) == "DATA_YEAR"] <- "YEAR"
 names(hate_crime_dataset)[names(hate_crime_dataset) == "STATE_NAME"] <- "STATE"
-
-
 #### GUNS ####
 # Importação dos dados
 guns_dataset <- read_excel('TL-354-State-Level Estimates of Household Firearm Ownership.xlsx', sheet = 2) %>%
@@ -29,7 +26,10 @@ guns_dataset <- read_excel('TL-354-State-Level Estimates of Household Firearm Ow
   select(-c("FIP"))
 names(guns_dataset)[names(guns_dataset) == "Year"] <- "YEAR"
 
-
+guns_dataset_older <- read_excel('TL-354-State-Level Estimates of Household Firearm Ownership.xlsx', sheet = 2) %>%
+#  filter(Year >= 1991) %>%
+  select(-c("FIP"))
+names(guns_dataset_older)[names(guns_dataset_older) == "Year"] <- "YEAR"
 
 
 
@@ -42,9 +42,55 @@ data_pop_arranged <- melt(data_pop)
 names(data_pop_arranged) <- c("STATE", "YEAR", "POPULATION")
 data_pop_arranged <- as.data.frame(data_pop_arranged[-c(1:50, 1351:1500),])
 
+#### DF_REG ####
+
+# CRIME POR ESTADO POR ANO
+crime_per_state_per_year <- hate_crime_dataset %>%
+  group_by(YEAR) %>%
+  count(STATE) %>%
+  arrange(desc(n))
+
+# HFR por ESTADO 
+guns_per_state <- guns_dataset %>%
+  select(c(YEAR, STATE, HFR)) %>%
+  group_by(STATE) %>%
+  mutate(mean_HFR_per_state = mean(HFR))
+guns_per_state <- guns_per_state[c(1:1300 %% 26 == 0), c(2, 4)]
+guns_per_state; guns_per_state[order(-guns_per_state$mean_HFR_per_state),]
+
+
+guns_per_state_per_year <- guns_dataset %>%
+  select(c("YEAR", "STATE", "HFR"))
+names(guns_per_state_per_year) <- c("YEAR", "STATE", "Prop_guns_p_y_s")
+
+
+# Proporção de CRIME por ESTADO por ANO,
+# será usado para compor o df_reg
+# Adicionando uma coluna com a proporção de crimes na populaçao por estado ao longo do tempo:
+prop_crime_per_state_per_year <- merge(crime_per_state_per_year, data_pop_arranged) %>%
+  mutate(PROP_CRIME = n / POPULATION)
+
+
+
+#### Construindo o DataFrame com freq e prop de armas e crimes
+df_intermediario <- merge(prop_crime_per_state_per_year, guns_per_state_per_year)
+df_reg <- merge(df_intermediario, guns_per_state)
+names(df_reg) <- c("STATE", "YEAR", "CRIME_PER_STATE_PER_YEAR", "POPULATION",
+                   "PROP_CRIME", "PROP_GUNS_PER_STATE_PER_YEAR",
+                   "MEAN_HFR_PER_STATE")
+df_reg$NUMBER_GUNS <- round(df_reg$POPULATION * df_reg$PROP_GUNS_PER_STATE_PER_YEAR, 0)
+
 data_pop_arranged_2 <- data_pop_arranged %>%
   arrange(STATE)
 
+
+#### certo
+guns_dataset$NUMBER_GUNS <- round(data_pop_arranged_2$POPULATION * guns_dataset$HFR)
+
+guns_dataset$POPULATION <- data_pop_arranged_2$POPULATION
+#### certo
+
+#########################################################################
 
 
 
@@ -91,11 +137,6 @@ total_crime_per_state_norm <- hate_crime_dataset %>%
 
 
 # Crimes por ESTADO por ANO
-crime_per_state_per_year <- hate_crime_dataset %>%
-  group_by(YEAR) %>%
-  count(STATE) %>%
-  arrange(desc(n))
-
 crime_per_state_per_year
 
 # TRENDLINE CRIME por ESTADO por ANO:
@@ -342,6 +383,16 @@ hate_crime_dataset <- hate_crime_dataset %>%
 
 
 
+# reduce
+a <- hate_crime_dataset %>%
+  group_by(STATE, YEAR) %>%
+  summarise(across(starts_with("ANTI"), sum))
+
+# Dataframe mais importante de todos ->
+b <- full_join(guns_dataset, a) 
+b[is.na(b)]<-0
+
+
 ############################ FIM DAS CORREÇÕES DE VICTIM BIAS ################ 
 
 
@@ -358,17 +409,7 @@ ggplot(cab_per_state_per_year, aes(x = YEAR, y = n)) +
   geom_line() +
   facet_wrap(~STATE)
 
-# Para visualisar algum estado específico:
 
-func <- function(df, col, x) {
-df %>%
-  filter(col == x) %>%
-  dygraph(main = "Número de crimes de ódio por ano da categoria {}",
-          ylab = "Crimes",
-          xlab = "Anos")
-}
-
-func(cab_per_state_per_year, STATE, "Utah")
 
 
 cab_per_state_per_year %>%
@@ -407,19 +448,8 @@ cab_per_state_per_year %>%
 
 
 
-
-# reduce
-a <- hate_crime_dataset %>%
-  group_by(STATE, YEAR) %>%
-  summarise(across(starts_with("ANTI"), sum))
-
-
-b <- full_join(guns_dataset, a) 
-b[is.na(b)]<-0
-
-
 b_new<- b %>%
-  mutate(across(starts_with("ANTI"), .fns = ~./POPULATION)) %>%
+  mutate(across(starts_with("ANTI"), .fns = ~./POPULATION)) 
 
 b_new[which(is.nan(b_new))] <- 0
 b_new[which(b_new == Inf)] <- 0
@@ -618,7 +648,6 @@ guns_per_year <- guns_per_year[1:26, c(1, 3)]
 guns_per_year
 guns_per_year[order(-guns_per_year$mean_HFR_per_year),]
 
-
 # Gráfico HFR por ANO
 ggplot(guns_per_year, aes(x = YEAR, y = mean_HFR_per_year)) +
   geom_line()
@@ -629,26 +658,17 @@ guns_per_year %>%
           xlab = "Anos")
 
 # HFR por ESTADO 
-guns_per_state <- guns_dataset %>%
-  select(c(YEAR, STATE, HFR)) %>%
-  group_by(STATE) %>%
-  mutate(mean_HFR_per_state = mean(HFR))
-guns_per_state <- guns_per_state[c(1:1300 %% 26 == 0), c(2, 4)]
-guns_per_state; guns_per_state[order(-guns_per_state$mean_HFR_per_state),]
+guns_per_state 
 
 
-# HFR POR ANO POR ESTADO
-guns_per_state_per_year <- guns_dataset %>%
-  select(c("YEAR", "STATE", "HFR"))
-names(guns_per_state_per_year) <- c("YEAR", "STATE", "Prop_guns_p_y_s")
+# HFR POR ESTADO POR ANO
+guns_per_state_per_year 
+
 
 # Gráfico de HFR por ANO por ESTADO
 ggplot(guns_dataset, aes(x = YEAR, y = HFR)) +
   geom_line() +
   facet_wrap(~ STATE)
-
-
-
 
 
 ######## DADOS AGREGADOS CRIME feat.GUNS ########
@@ -669,19 +689,9 @@ guns_per_state_per_year$NUMBER_GUNS <- round(data_pop_arranged_2$population * df
 
 ########################### DATASET POPULAÇÃO ####################
 
-
-# Adicionando uma coluna com a proporção de crimes na populaçao por estado ao longo do tempo:
-prop_crime_per_state_per_year <- merge(crime_per_state_per_year, data_pop_arranged) %>%
-  mutate(PROP_CRIME = n / POPULATION)
-
+prop_crime_per_state_per_year
 
 #### Construindo o DataFrame com freq e prop de armas e crimes ####
-df_intermediario <- merge(prop_crime_per_state_per_year, guns_per_state_per_year)
-df_reg <- merge(df_intermediario, guns_per_state)
-names(df_reg) <- c("STATE", "YEAR", "CRIME_PER_STATE_PER_YEAR", "POPULATION",
-                     "PROP_CRIME", "PROP_GUNS_PER_STATE_PER_YEAR",
-                     "MEAN_HFR_PER_STATE")
-df_reg$NUMBER_GUNS <- round(df_reg$POPULATION * df_reg$PROP_GUNS_PER_STATE_PER_YEAR, 0)
 
 
 # Gráfico com as proporções
@@ -692,10 +702,10 @@ ggplot(df_reg, aes(x = PROP_GUNS_PER_STATE_PER_YEAR, y = PROP_CRIME)) +
        x = "Prop guns", y = "Prop crimes")
 
 # Gráfico com os totais
-ggplot(df_reg, aes(x = CRIME_PER_STATE_PER_YEAR, y = NUMBER_GUNS)) +
+ggplot(df_reg, aes(x = NUMBER_GUNS, y = CRIME_PER_STATE_PER_YEAR)) +
   geom_point() +
   stat_smooth(method = "lm", col = "red") +
-  labs(title = "Guns vs Crimes", subtitle = "Year and State", x = "Number of guns", y = "Number of crimes")
+  labs(title = "Guns vs Crimes", subtitle = "Year and State agg", x = "Number of Crimes", y = "Number of guns")
 
 # Reg 1.a: total crimes ~ total armas
 lm1a <- lm(CRIME_PER_STATE_PER_YEAR ~ NUMBER_GUNS + factor(YEAR) + factor(STATE), data = df_reg)
@@ -751,6 +761,169 @@ coefficients(lm5)[1]
 
 # REG 6 -> crime ~ vítimas negras 
 lm6 <- lm(df_reg$CRIME_PER_STATE_PER_YEAR ~ hb$n)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#################### DIFF IN DIFF? ###################
+
+analise <- data_pop[c(33, 46),]
+
+# coletando a prop de armas em North Carolina e em Virginia
+analise_hfr <- rbind(guns_per_state_per_year[c(833: 858),], guns_per_state_per_year[c(1171: 1196),])
+
+# plotando a proporção de armas em cada estado
+ggplot(analise_hfr, aes(x = YEAR, y = Prop_guns_p_y_s)) +
+  geom_line() +
+  facet_wrap(~STATE)
+
+# coletando o numero absoluto de armas em North Carolina e em Virginia 
+analise_armas <- rbind(b[c(833:858), c('YEAR', 'STATE', 'NUMBER_GUNS')], b[c(1171:1196), c('YEAR', 'STATE', 'NUMBER_GUNS')])
+
+# plotando o numero absoluto de armas em cada estado 
+ggplot(analise_armas, aes(x = YEAR, y = NUMBER_GUNS)) +
+  geom_line() +
+  facet_wrap(~STATE)
+
+
+# coletando o numero de crimes de ódio em North Carolina e em Virginia
+analise_crimes <- crime_per_state_per_year %>%
+  select(STATE, YEAR, n) %>%
+  filter(STATE == c('North Carolina', 'Virginia')) %>%
+  group_by(YEAR) %>%
+  arrange(YEAR) %>%
+  arrange(STATE)
+
+# plotando a quantidade de crimes em cada estado
+ggplot(analise_crimes, aes(x = YEAR, y = n)) +
+  geom_line() +
+  facet_wrap(~STATE)
+
+
+# D&D Crimes 
+
+# antes do tratamento:
+crime_nc_1993 <- analise_crimes %>%
+  filter(STATE == 'North Carolina', YEAR == 1993) %>%
+  select(n)
+crime_nc_1993 <- crime_nc_1993[2]
+
+crime_vi_1993 <- analise_crimes %>%
+  filter(STATE=='Virginia', YEAR == 1993) %>%
+  select(n)
+
+crime_vi_1993 <- crime_vi_1993[2]
+
+# pós tratamento:
+crime_nc_1996 <- analise_crimes %>%
+  filter(STATE=='North Carolina', YEAR == 1996) %>%
+  select(n)
+crime_nc_1996 <- crime_nc_1996[2]
+
+
+crime_vi_1996 <- analise_crimes %>%
+  filter(STATE=='Virginia', YEAR == 1996) %>%
+  select(n)
+crime_vi_1996 <- crime_vi_1996[2]
+
+
+# primeira diferença
+d_crime_1993 <- crime_nc_1993 - crime_vi_1993
+
+# segunda diferença
+d_crime_1996 <- crime_vi_1996 - crime_vi_1996
+
+# DiD
+did_crime <- d_crime_1996 - d_crime_1993
+did_crime
+
+
+
+# D&D - prop de armas
+# antes do tratamento:
+hfr_nc_1994 <- analise_hfr %>%
+  filter(STATE=='North Carolina', YEAR == 1994) %>%
+  select(Prop_guns_p_y_s)
+
+hfr_vi_1994 <- analise_hfr %>%
+  filter(STATE=='Virginia', YEAR == 1994) %>%
+  select(Prop_guns_p_y_s)
+
+# pós tratamento:
+hfr_nc_1996 <- analise_hfr %>%
+  filter(STATE=='North Carolina', YEAR == 1996) %>%
+  select(Prop_guns_p_y_s)
+
+hfr_vi_1996 <- analise_hfr%>%
+  filter(STATE=='Virginia', YEAR == 1996) %>%
+  select(Prop_guns_p_y_s)
+
+
+# primeira diferença
+d_hfr_1994 <- hfr_nc_1994 - hfr_vi_1994
+
+# segunda diferença
+d_hfr_1996 <- hfr_nc_1996 - hfr_vi_1996
+
+# DiD
+did_hfr <- d_hfr_1996 - d_hfr_1994
+
+
+
+
+# D&D - n absoluto de armas
+
+# antes do tratamento :
+armas_nc_1994 <- analise_armas%>%
+  filter(STATE=='North Carolina', YEAR == 1994) %>%
+  select(NUMBER_GUNS)
+
+armas_vi_1994 <- analise_armas%>%
+  filter(STATE=='Virginia', YEAR == 1994) %>%
+  select(NUMBER_GUNS)
+
+# pós tratamento:
+armas_nc_1996 <- analise_armas%>%
+  filter(STATE=='North Carolina', YEAR == 1996) %>%
+  select(NUMBER_GUNS)
+
+armas_vi_1996 <- analise_armas%>%
+  filter(STATE=='Virginia', YEAR == 1996) %>%
+  select(NUMBER_GUNS)
+
+# primeira diferença
+d_1994 <- armas_nc_1994 - armas_vi_1994
+
+# segunda diferença
+d_1996 <- armas_nc_1996 - armas_vi_1996
+
+# DiD
+did_armas <- d_1996 - d_1994
+
+
+
 
 
 
@@ -833,6 +1006,15 @@ data_pol_pref <- data_pol_pref_raw %>%
 
 
 
+
+
+
+
+
+
+
+
+
 ############################################################################
 ############################### RASCUNHO ######################################
 ############################################################################
@@ -880,6 +1062,22 @@ setDT(president)
 elections_data_arranged <- melt(president)
 
 elections_data_arranged
+
+
+
+# Para visualisar algum estado específico:
+
+func <- function(df, col, x) {
+  return(df %>%
+           filter(col == as.str(x)) %>%
+           dygraph(main = "Número de crimes de ódio por ano da categoria {}",
+                   ylab = "Crimes",
+                   xlab = "Anos"))
+}
+
+func(cab_per_state_per_year, STATE, "Utah")
+
+
 
 
 ### DESCRIÇÃO DOS DADOS DE GUNS ###
